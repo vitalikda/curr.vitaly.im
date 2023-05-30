@@ -1,87 +1,17 @@
 import * as React from 'react'
-import Image from 'next/image'
 import Head from 'next/head'
 import { Inter } from 'next/font/google'
-import { currencies } from '@/constants/currencies'
+
+import { currencies } from '../constants/currencies'
+import { debounce, getCurrencySymbol } from '../utils'
+import { CheckIcon, ConvertIcon, SearchIcon } from '../icons'
+import { Drawer } from '../components'
 
 const inter = Inter({ subsets: ['latin'] })
 
 const meta = {
   title: 'Curr Converter',
   description: 'Track your currency conversion rates with ease.'
-}
-
-const ConvertIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 24 24' {...props}>
-    <path
-      fill='currentColor'
-      d='M5.378 4.514a9.962 9.962 0 0 1 6.627-2.511c5.523 0 10 4.477 10 10a9.954 9.954 0 0 1-1.793 5.715l-2.707-5.715h2.5A8 8 0 0 0 6.279 6.416l-.9-1.902Zm13.253 14.978a9.962 9.962 0 0 1-6.626 2.51c-5.523 0-10-4.476-10-10c0-2.124.663-4.094 1.793-5.714l2.707 5.715h-2.5A8 8 0 0 0 17.73 17.59l.901 1.902Zm-5.212-4.66l-2.828-2.83l-2.829 2.83l-1.414-1.415l4.243-4.242l2.828 2.828l2.828-2.829l1.415 1.415l-4.243 4.242Z'
-    />
-  </svg>
-)
-
-const CheckIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns='http://www.w3.org/2000/svg'
-    width='32'
-    height='32'
-    viewBox='0 0 24 24'
-    fill='none'
-    stroke='currentColor'
-    strokeWidth={1.5}
-    {...props}
-  >
-    <path strokeLinecap='round' strokeLinejoin='round' d='M4.5 12.75l6 6 9-13.5' />
-  </svg>
-)
-
-const SearchIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns='http://www.w3.org/2000/svg'
-    width='32'
-    height='32'
-    viewBox='0 0 24 24'
-    fill='none'
-    stroke='currentColor'
-    strokeWidth={1.5}
-    {...props}
-  >
-    <path
-      strokeLinecap='round'
-      strokeLinejoin='round'
-      d='M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z'
-    />
-  </svg>
-)
-
-const getCurrSymbol = (code: string) => {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: code,
-    currencyDisplay: 'symbol',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  })
-    .format(0)
-    .replace(/\d/g, '')
-}
-
-const Drawer = ({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) => {
-  return (
-    <div className={`${open ? '' : 'sr-only'}`}>
-      <div
-        className={`fixed inset-0 z-30 transition-opacity bg-black bg-opacity-50 ${open ? 'opacity-100' : 'opacity-0'}`}
-        onClick={onClose}
-      />
-      <div
-        className={`fixed bottom-0 left-0 right-0 z-40 w-full max-w-lg p-4 mx-auto overflow-y-auto transition-transform h-[65vh] bg-slate-800 transform-none ${
-          open ? 'translate-y-0' : 'translate-y-full'
-        }`}
-      >
-        {children}
-      </div>
-    </div>
-  )
 }
 
 const CurrSelector = ({ code, onSelect }: { code: string; onSelect: (code: string) => void }) => {
@@ -102,7 +32,7 @@ const CurrSelector = ({ code, onSelect }: { code: string; onSelect: (code: strin
   return (
     <div className='relative flex items-center justify-center w-20 h-20 text-white border-2 border-black aspect-square rounded-2xl bg-slate-900 group-focus-within:bg-pink-500'>
       <button onClick={() => setOpen(true)} className='text-2xl'>
-        {getCurrSymbol(code)}
+        {getCurrencySymbol(code)}
       </button>
       <Drawer open={open} onClose={() => setOpen(false)}>
         <div className='flex flex-col gap-1'>
@@ -161,37 +91,47 @@ const CurrInput = ({ label, value, onChange }: { label: string; value: string; o
   )
 }
 
-const debounce = (fn: (...args: any[]) => void, delay: number) => {
-  let timeoutId: ReturnType<typeof setTimeout>
-  return (...args: any[]) => {
-    clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => fn(...args), delay)
+const initialState = {
+  base: 'a',
+  a: { code: 'USD', value: '0' },
+  b: { code: 'EUR', value: '0' }
+}
+type State = typeof initialState
+
+const reducer = (state: State, action: { type: string; payload: State['a'] }) => {
+  switch (action.type) {
+    case 'SET_A':
+      return { ...state, base: 'a', a: action.payload }
+    case 'SET_B':
+      return { ...state, base: 'b', b: action.payload }
+    default:
+      return state
   }
 }
 
+const fetcher = debounce((url: string) => fetch(url).then((res) => res.json()), 500)
+const convert = async (from: string, to: string, amount: string) =>
+  fetcher(`/api/convert?from=${from}&to=${to}&amount=${amount}`)
+
 export default function Home() {
-  const [from, setFrom] = React.useState({
-    code: 'USD',
-    value: '0'
-  })
-  const [to, setTo] = React.useState({
-    code: 'EUR',
-    value: '0'
-  })
+  const [state, dispatch] = React.useReducer(reducer, initialState)
 
   React.useEffect(() => {
-    if (from.value === '0') return
-    const debounced = debounce(async () => {
-      try {
-        const res = await fetch(`/api/convert?from=${from.code}&to=${to.code}&amount=${from.value}`)
-        const data = await res.json()
-        setTo((prev) => ({ ...prev, value: data.result }))
-      } catch (error) {
-        console.log(error)
+    try {
+      if (state.base === 'a') {
+        convert(state.a.code, state.b.code, state.a.value).then((data) => {
+          dispatch({ type: 'SET_B', payload: { ...state.b, value: data.result } })
+        })
       }
-    }, 500)
-    debounced()
-  }, [from.value])
+      if (state.base === 'b') {
+        convert(state.b.code, state.a.code, state.b.value).then((data) => {
+          dispatch({ type: 'SET_A', payload: { ...state.a, value: data.result } })
+        })
+      }
+    } catch (error) {
+      console.log(error)
+    }
+  }, [state.a.code, state.a.value, state.b.code, state.b.value])
 
   return (
     <>
@@ -210,12 +150,26 @@ export default function Home() {
               <ConvertIcon className='text-white' />
             </div>
             <div className='flex group'>
-              <CurrSelector code={from.code} onSelect={(code) => setFrom((s) => ({ ...s, code }))} />
-              <CurrInput label={'from'} value={from.value} onChange={(value) => setFrom((s) => ({ ...s, value }))} />
+              <CurrSelector
+                code={state.a.code}
+                onSelect={(code) => dispatch({ type: 'SET_A', payload: { ...state.a, code } })}
+              />
+              <CurrInput
+                label={'from'}
+                value={state.a.value}
+                onChange={(value) => dispatch({ type: 'SET_A', payload: { ...state.a, value } })}
+              />
             </div>
             <div className='flex group'>
-              <CurrSelector code={to.code} onSelect={(code) => setTo((s) => ({ ...s, code }))} />
-              <CurrInput label={'to'} value={to.value} onChange={(value) => setTo((s) => ({ ...s, value }))} />
+              <CurrSelector
+                code={state.b.code}
+                onSelect={(code) => dispatch({ type: 'SET_B', payload: { ...state.b, code } })}
+              />
+              <CurrInput
+                label={'to'}
+                value={state.b.value}
+                onChange={(value) => dispatch({ type: 'SET_B', payload: { ...state.b, value } })}
+              />
             </div>
           </div>
         </div>
