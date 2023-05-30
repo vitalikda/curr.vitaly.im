@@ -74,7 +74,7 @@ const Drawer = ({ open, onClose, children }: { open: boolean; onClose: () => voi
         onClick={onClose}
       />
       <div
-        className={`fixed bottom-0 left-0 right-0 z-40 w-full max-w-lg p-4 mx-auto overflow-y-auto transition-transform max-h-[65vh] bg-slate-800 transform-none ${
+        className={`fixed bottom-0 left-0 right-0 z-40 w-full max-w-lg p-4 mx-auto overflow-y-auto transition-transform h-[65vh] bg-slate-800 transform-none ${
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
