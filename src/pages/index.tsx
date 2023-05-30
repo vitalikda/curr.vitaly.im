@@ -102,34 +102,42 @@ const reducer = (state: State, action: { type: string; payload: State['a'] }) =>
   switch (action.type) {
     case 'SET_A':
       return { ...state, base: 'a', a: action.payload }
+    case 'UPDATE_A':
+      return { ...state, a: action.payload }
     case 'SET_B':
       return { ...state, base: 'b', b: action.payload }
+    case 'UPDATE_B':
+      return { ...state, b: action.payload }
     default:
       return state
   }
 }
 
 const fetcher = debounce((url: string) => fetch(url).then((res) => res.json()), 500)
-const convert = async (from: string, to: string, amount: string) =>
-  fetcher(`/api/convert?from=${from}&to=${to}&amount=${amount}`)
+const convert = async (from: string, to: string, amount: string) => {
+  try {
+    const data = await fetcher(`/api/convert?from=${from}&to=${to}&amount=${amount}`)
+    if (data.name === 'ZodError') throw new Error('Invalid input')
+    if (!data.result) throw new Error('No result')
+    return data
+  } catch (error) {
+    console.log(error)
+  }
+}
 
 export default function Home() {
   const [state, dispatch] = React.useReducer(reducer, initialState)
 
   React.useEffect(() => {
-    try {
-      if (state.base === 'a') {
-        convert(state.a.code, state.b.code, state.a.value).then((data) => {
-          dispatch({ type: 'SET_B', payload: { ...state.b, value: data.result } })
-        })
-      }
-      if (state.base === 'b') {
-        convert(state.b.code, state.a.code, state.b.value).then((data) => {
-          dispatch({ type: 'SET_A', payload: { ...state.a, value: data.result } })
-        })
-      }
-    } catch (error) {
-      console.log(error)
+    if (state.base === 'a' && state.a.value !== '0') {
+      convert(state.a.code, state.b.code, state.a.value).then((data) => {
+        !!data && dispatch({ type: 'UPDATE_B', payload: { ...state.b, value: data.result } })
+      })
+    }
+    if (state.base === 'b' && state.b.value !== '0') {
+      convert(state.b.code, state.a.code, state.b.value).then((data) => {
+        !!data && dispatch({ type: 'UPDATE_A', payload: { ...state.a, value: data.result } })
+      })
     }
   }, [state.a.code, state.a.value, state.b.code, state.b.value])
 
@@ -155,7 +163,7 @@ export default function Home() {
                 onSelect={(code) => dispatch({ type: 'SET_A', payload: { ...state.a, code } })}
               />
               <CurrInput
-                label={'from'}
+                label={state.base === 'a' ? 'from' : 'to'}
                 value={state.a.value}
                 onChange={(value) => dispatch({ type: 'SET_A', payload: { ...state.a, value } })}
               />
@@ -166,7 +174,7 @@ export default function Home() {
                 onSelect={(code) => dispatch({ type: 'SET_B', payload: { ...state.b, code } })}
               />
               <CurrInput
-                label={'to'}
+                label={state.base === 'b' ? 'from' : 'to'}
                 value={state.b.value}
                 onChange={(value) => dispatch({ type: 'SET_B', payload: { ...state.b, value } })}
               />

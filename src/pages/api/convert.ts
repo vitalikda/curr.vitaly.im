@@ -31,7 +31,7 @@ const formDataSchema = z
       .string()
       .min(1)
       .refine((value) => {
-        return !isNaN(Number(value))
+        return !isNaN(Number(value)) && Number(value) > 0
       }, 'Value should be a valid number')
   })
   .refine((data) => {
