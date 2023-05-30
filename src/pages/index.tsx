@@ -140,18 +140,10 @@ const CurrSelector = ({ code, onSelect }: { code: string; onSelect: (code: strin
   )
 }
 
-const debounce = (fn: (...args: any[]) => void, delay: number) => {
-  let timeoutId: ReturnType<typeof setTimeout>
-  return (...args: any[]) => {
-    clearTimeout(timeoutId)
-    timeoutId = setTimeout(() => fn(...args), delay)
-  }
-}
-
 const CurrInput = ({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) => {
-  const handleChange = debounce((value: string) => {
+  const handleChange = (value: string) => {
     onChange(value)
-  }, 500)
+  }
 
   return (
     <fieldset className='relative flex items-center h-20 px-4 text-white border-2 border-black rounded-2xl bg-slate-900 group-focus-within:bg-pink-500'>
@@ -169,6 +161,14 @@ const CurrInput = ({ label, value, onChange }: { label: string; value: string; o
   )
 }
 
+const debounce = (fn: (...args: any[]) => void, delay: number) => {
+  let timeoutId: ReturnType<typeof setTimeout>
+  return (...args: any[]) => {
+    clearTimeout(timeoutId)
+    timeoutId = setTimeout(() => fn(...args), delay)
+  }
+}
+
 export default function Home() {
   const [from, setFrom] = React.useState({
     code: 'USD',
@@ -179,14 +179,18 @@ export default function Home() {
     value: '0'
   })
 
-  // fetch exchange rates when value change
   React.useEffect(() => {
     if (from.value === '0') return
-    fetch(`/api/convert?from=${from.code}&to=${to.code}&amount=${from.value}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setTo((s) => ({ ...s, value: data.result }))
-      })
+    const debounced = debounce(async () => {
+      try {
+        const res = await fetch(`/api/convert?from=${from.code}&to=${to.code}&amount=${from.value}`)
+        const data = await res.json()
+        setTo((prev) => ({ ...prev, value: data.result }))
+      } catch (error) {
+        console.log(error)
+      }
+    }, 500)
+    debounced()
   }, [from.value])
 
   return (
