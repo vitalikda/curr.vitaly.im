@@ -169,68 +169,72 @@ export default function Home() {
         <title key='title'>{meta.title}</title>
         <meta name='description' content={meta.description} />
       </Head>
-      <main className={`flex min-h-screen flex-col items-center justify-between md:py-12 md:px-24 ${inter.className}`}>
-        <div className='flex flex-col max-w-lg min-h-[600px] bg-black pt-2 px-2 md:pt-6 md:px-6 md:rounded-xl md:border border-slate-900'>
-          <div className='py-4 mb-4 text-center'>
-            <h1 className='text-lg text-white'>Converter</h1>
-          </div>
-          <div className='relative flex flex-col'>
-            <div className='absolute z-20 bg-black border border-black rounded-full top-[3.75rem] left-[3.75rem]'>
-              <ConvertIcon className='text-white' />
+      <main className={inter.className}>
+        <div className='flex flex-col items-center justify-between min-h-screen md:py-12 md:px-24'>
+          <div className='flex flex-col gap-4 max-w-lg min-h-[100svh] md:max-h-[calc(100vh-6rem)] md:min-h-[calc(100vh-6rem)] px-2 pt-2 bg-black md:pt-6 md:px-6 md:rounded-xl md:border border-slate-900 overflow-auto no-scrollbar'>
+            <div className='py-4 text-center'>
+              <h1 className='text-lg text-white'>Converter</h1>
             </div>
-            <div className='flex group'>
-              <CurrSelector
-                code={state.a.code}
-                onSelect={(code) => dispatch({ type: 'SET_A', payload: { ...state.a, code } })}
-              />
-              <CurrInput
-                label={state.base === 'a' ? 'from' : 'to'}
-                value={state.a.value}
-                onChange={(value) => dispatch({ type: 'SET_A', payload: { ...state.a, value } })}
-              />
-            </div>
-            <div className='flex group'>
-              <CurrSelector
-                code={state.b.code}
-                onSelect={(code) => dispatch({ type: 'SET_B', payload: { ...state.b, code } })}
-              />
-              <CurrInput
-                label={state.base === 'b' ? 'from' : 'to'}
-                value={state.b.value}
-                onChange={(value) => dispatch({ type: 'SET_B', payload: { ...state.b, value } })}
-              />
-            </div>
-          </div>
-          {!!history.length && (
-            <div className='flex-1 py-2 mt-4 bg-slate-900 rounded-t-xl'>
-              <div className='w-20 h-1 mx-auto my-2 bg-black rounded-full' />
-              <div className='flex flex-col-reverse space-y-1'>
-                {history.map((item, i) => (
-                  <button
-                    key={`${i}-${item.date}`}
-                    className='w-full px-4 py-1 text-left hover:bg-black/20'
-                    onClick={() => {
-                      dispatch({ type: 'SET_A', payload: item.from })
-                      dispatch({ type: 'UPDATE_B', payload: item.to })
-                    }}
-                  >
-                    <span className='flex items-center justify-between text-white'>
-                      <span className='space-x-1'>
-                        <span>{item.from.value}</span>
-                        <span className='text-sm lowercase'>
-                          {item.from.code} to {item.to.code}
-                        </span>
-                      </span>
-                      <span>{formatCurrency(item.to.value, item.to.code)}</span>
-                    </span>
-                    <span className='text-xs text-gray-400'>
-                      {item.date} • {item.rate}
-                    </span>
-                  </button>
-                ))}
+            <div className='relative flex flex-col'>
+              <div className='absolute z-20 bg-black border border-black rounded-full top-[3.75rem] left-[3.75rem]'>
+                <ConvertIcon className='text-white' />
+              </div>
+              <div className='flex group'>
+                <CurrSelector
+                  code={state.a.code}
+                  onSelect={(code) => dispatch({ type: 'SET_A', payload: { ...state.a, code } })}
+                />
+                <CurrInput
+                  label={state.base === 'a' ? 'from' : 'to'}
+                  value={state.a.value}
+                  onChange={(value) => dispatch({ type: 'SET_A', payload: { ...state.a, value } })}
+                />
+              </div>
+              <div className='flex group'>
+                <CurrSelector
+                  code={state.b.code}
+                  onSelect={(code) => dispatch({ type: 'SET_B', payload: { ...state.b, code } })}
+                />
+                <CurrInput
+                  label={state.base === 'b' ? 'from' : 'to'}
+                  value={state.b.value}
+                  onChange={(value) => dispatch({ type: 'SET_B', payload: { ...state.b, value } })}
+                />
               </div>
             </div>
-          )}
+            <div className='flex-1'>
+              {!!history.length && (
+                <div className='w-full py-2 mt-auto bg-slate-900 rounded-t-xl'>
+                  <div className='w-20 h-1 mx-auto my-2 bg-black rounded-full' />
+                  <div className='flex flex-col-reverse space-y-1'>
+                    {history.map((item, i) => (
+                      <button
+                        key={`${i}-${item.date}`}
+                        className='w-full px-4 py-1 text-left hover:bg-black/20'
+                        onClick={() => {
+                          dispatch({ type: 'SET_A', payload: item.from })
+                          dispatch({ type: 'UPDATE_B', payload: item.to })
+                        }}
+                      >
+                        <span className='flex items-center justify-between text-white'>
+                          <span className='space-x-1'>
+                            <span>{item.from.value}</span>
+                            <span className='text-sm lowercase'>
+                              {item.from.code} to {item.to.code}
+                            </span>
+                          </span>
+                          <span>{formatCurrency(item.to.value, item.to.code)}</span>
+                        </span>
+                        <span className='text-xs text-gray-400'>
+                          {item.date} • {item.rate}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </main>
     </>
