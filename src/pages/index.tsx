@@ -1,12 +1,13 @@
 import * as React from 'react'
 import Head from 'next/head'
 import { Inter } from 'next/font/google'
-import { useLocalStorage } from 'usehooks-ts'
+import { useLocalStorage, useDebounce } from 'usehooks-ts'
 
 import { currencies } from '../constants/currencies'
-import { debounce, formatCurrency, getCurrencySymbol } from '../utils'
+import { formatCurrency, formatDateTime, getCurrencySymbol } from '../utils'
 import { CheckIcon, ConvertIcon, SearchIcon } from '../icons'
 import { Drawer } from '../components'
+import { useConvert } from '../hooks/useCovert'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -14,6 +15,14 @@ const meta = {
   title: 'Curr Converter',
   description: 'Track your currency conversion rates with ease.'
 }
+
+const initialState = {
+  base: 'a',
+  a: { code: 'USD', value: '0' },
+  b: { code: 'EUR', value: '0' }
+}
+
+type State = typeof initialState
 
 const CurrSelector = ({ code, onSelect }: { code: string; onSelect: (code: string) => void }) => {
   const [open, setOpen] = React.useState(false)
@@ -88,79 +97,35 @@ const CurrInput = ({ label, value, onChange }: { label: string; value: string; o
   )
 }
 
-const initialState = {
-  base: 'a',
-  a: { code: 'USD', value: '0' },
-  b: { code: 'EUR', value: '0' }
-}
-type State = typeof initialState
-
-const reducer = (state: State, action: { type: string; payload: State['a'] }) => {
-  switch (action.type) {
-    case 'SET_A':
-      return { ...state, base: 'a', a: action.payload }
-    case 'UPDATE_A':
-      return { ...state, a: action.payload }
-    case 'SET_B':
-      return { ...state, base: 'b', b: action.payload }
-    case 'UPDATE_B':
-      return { ...state, b: action.payload }
-    default:
-      return state
-  }
-}
-
-const fetcher = debounce((url: string) => fetch(url).then((res) => res.json()), 500)
-
-const convert = async (
-  from: string,
-  to: string,
-  amount: string
-): Promise<{ date: string; rate: string; result: string } | undefined> => {
-  try {
-    const data = await fetcher(`/api/convert?from=${from}&to=${to}&amount=${amount}`)
-    if (data.name === 'ZodError') throw new Error('Invalid input')
-    if (!data.result) throw new Error('No result')
-    return data
-  } catch (error) {
-    console.log(error)
-  }
-}
-
 export default function Home() {
-  const [state, dispatch] = React.useReducer(reducer, initialState)
-  const [history, setHistory] = useLocalStorage<
-    {
-      date: string
-      rate: string
-      from: State['a']
-      to: State['a']
-    }[]
-  >('curr-history', [])
+  const [state, setState] = React.useState(initialState)
+  const dState = useDebounce(state, 500)
+
+  const b = useConvert({ from: dState.a.code, to: dState.b.code, amount: dState.a.value }, dState.base === 'a')
+  const a = useConvert({ from: dState.b.code, to: dState.a.code, amount: dState.b.value }, dState.base === 'b')
+
+  const [history, setHistory] = useLocalStorage<{ date: string; rate: string; from: State['a']; to: State['a'] }[]>(
+    'curr-history',
+    []
+  )
 
   React.useEffect(() => {
-    if (state.base === 'a' && state.a.value !== '0') {
-      convert(state.a.code, state.b.code, state.a.value).then((data) => {
-        if (data) {
-          const { date, rate, result } = data
-          const payload = { ...state.b, value: result }
-          dispatch({ type: 'UPDATE_B', payload })
-          setHistory((prev) => [...prev, { date, rate, from: state.a, to: payload }])
-        }
-      })
-    }
-    if (state.base === 'b' && state.b.value !== '0') {
-      convert(state.b.code, state.a.code, state.b.value).then((data) => {
-        if (data) {
-          const { date, rate, result } = data
-          const payload = { ...state.a, value: result }
-          dispatch({ type: 'UPDATE_A', payload })
-          setHistory((prev) => [...prev, { date, rate, from: state.b, to: payload }])
-        }
-      })
+    if (b.data) {
+      const { date, rate, result } = b.data
+      const payload = { ...state.b, value: result }
+      setHistory((prev) => [...prev, { date, rate, from: state.a, to: payload }])
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.a.code, state.a.value, state.b.code, state.b.value])
+  }, [b.data])
+
+  React.useEffect(() => {
+    if (a.data) {
+      const { date, rate, result } = a.data
+      const payload = { ...state.a, value: result }
+      setHistory((prev) => [...prev, { date, rate, from: state.b, to: payload }])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [a.data])
 
   return (
     <>
@@ -182,23 +147,23 @@ export default function Home() {
               <div className='flex group'>
                 <CurrSelector
                   code={state.a.code}
-                  onSelect={(code) => dispatch({ type: 'SET_A', payload: { ...state.a, code } })}
+                  onSelect={(code) => setState((prev) => ({ ...prev, base: 'a', a: { ...prev.a, code } }))}
                 />
                 <CurrInput
                   label={state.base === 'a' ? 'from' : 'to'}
-                  value={state.a.value}
-                  onChange={(value) => dispatch({ type: 'SET_A', payload: { ...state.a, value } })}
+                  value={state.base === 'a' ? state.a.value : a.data?.result ?? state.a.value}
+                  onChange={(value) => setState((prev) => ({ ...prev, base: 'a', a: { ...prev.a, value } }))}
                 />
               </div>
               <div className='flex group'>
                 <CurrSelector
                   code={state.b.code}
-                  onSelect={(code) => dispatch({ type: 'SET_B', payload: { ...state.b, code } })}
+                  onSelect={(code) => setState((prev) => ({ ...prev, base: 'b', b: { ...prev.b, code } }))}
                 />
                 <CurrInput
                   label={state.base === 'b' ? 'from' : 'to'}
-                  value={state.b.value}
-                  onChange={(value) => dispatch({ type: 'SET_B', payload: { ...state.b, value } })}
+                  value={state.base === 'b' ? state.b.value : b.data?.result ?? state.b.value}
+                  onChange={(value) => setState((prev) => ({ ...prev, base: 'b', b: { ...prev.b, value } }))}
                 />
               </div>
             </div>
@@ -212,8 +177,7 @@ export default function Home() {
                         key={`${i}-${item.date}`}
                         className='w-full px-4 py-1 text-left hover:bg-black/20'
                         onClick={() => {
-                          dispatch({ type: 'SET_A', payload: item.from })
-                          dispatch({ type: 'UPDATE_B', payload: item.to })
+                          setState((prev) => ({ ...prev, base: 'a', a: item.from, b: item.to }))
                         }}
                       >
                         <span className='flex items-center justify-between text-white'>
@@ -226,7 +190,7 @@ export default function Home() {
                           <span>{formatCurrency(item.to.value, item.to.code)}</span>
                         </span>
                         <span className='text-xs text-gray-400'>
-                          {item.date} • {item.rate}
+                          {formatDateTime(item.date)} • {item.rate}
                         </span>
                       </button>
                     ))}
