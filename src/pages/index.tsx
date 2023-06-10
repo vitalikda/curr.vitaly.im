@@ -171,7 +171,7 @@ export default function Home() {
       </Head>
       <main className={inter.className}>
         <div className='flex flex-col items-center justify-between min-h-screen md:py-12 md:px-24'>
-          <div className='flex flex-col gap-4 max-w-lg min-h-[100svh] md:max-h-[calc(100vh-6rem)] md:min-h-[calc(100vh-6rem)] px-2 pt-2 bg-black md:pt-6 md:px-6 md:rounded-xl md:border border-slate-900 overflow-auto no-scrollbar'>
+          <div className='flex flex-col gap-4 max-w-lg min-h-[100dvh] md:max-h-[calc(100vh-6rem)] md:min-h-[calc(100vh-6rem)] px-2 pt-2 bg-black md:pt-6 md:px-6 md:rounded-xl md:border border-slate-900 overflow-auto no-scrollbar'>
             <div className='py-4 text-center'>
               <h1 className='text-lg text-white'>Converter</h1>
             </div>
