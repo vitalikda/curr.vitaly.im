@@ -1,9 +1,10 @@
 import * as React from 'react'
 import Head from 'next/head'
 import { Inter } from 'next/font/google'
+import { useLocalStorage } from 'usehooks-ts'
 
 import { currencies } from '../constants/currencies'
-import { debounce, getCurrencySymbol } from '../utils'
+import { debounce, formatCurrency, getCurrencySymbol } from '../utils'
 import { CheckIcon, ConvertIcon, SearchIcon } from '../icons'
 import { Drawer } from '../components'
 
@@ -71,6 +72,12 @@ const CurrSelector = ({ code, onSelect }: { code: string; onSelect: (code: strin
 }
 
 const CurrInput = ({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) => {
+  const formattedNumber = new Intl.NumberFormat('en-US', {
+    style: 'decimal',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(Number(value))
+
   const handleChange = (value: string) => {
     onChange(value)
   }
@@ -83,7 +90,7 @@ const CurrInput = ({ label, value, onChange }: { label: string; value: string; o
       <input
         id={label}
         type='text'
-        value={value}
+        value={formattedNumber}
         className='block w-full pl-16 text-2xl text-right bg-transparent border-transparent focus:border-transparent focus:bg-transparent focus:ring-0'
         onChange={(e) => handleChange(e.target.value)}
       />
@@ -114,7 +121,12 @@ const reducer = (state: State, action: { type: string; payload: State['a'] }) =>
 }
 
 const fetcher = debounce((url: string) => fetch(url).then((res) => res.json()), 500)
-const convert = async (from: string, to: string, amount: string) => {
+
+const convert = async (
+  from: string,
+  to: string,
+  amount: string
+): Promise<{ date: string; rate: string; result: string } | undefined> => {
   try {
     const data = await fetcher(`/api/convert?from=${from}&to=${to}&amount=${amount}`)
     if (data.name === 'ZodError') throw new Error('Invalid input')
@@ -127,18 +139,37 @@ const convert = async (from: string, to: string, amount: string) => {
 
 export default function Home() {
   const [state, dispatch] = React.useReducer(reducer, initialState)
+  const [history, setHistory] = useLocalStorage<
+    {
+      date: string
+      rate: string
+      from: State['a']
+      to: State['a']
+    }[]
+  >('curr-history', [])
 
   React.useEffect(() => {
     if (state.base === 'a' && state.a.value !== '0') {
       convert(state.a.code, state.b.code, state.a.value).then((data) => {
-        !!data && dispatch({ type: 'UPDATE_B', payload: { ...state.b, value: data.result } })
+        if (data) {
+          const { date, rate, result } = data
+          const payload = { ...state.b, value: result }
+          dispatch({ type: 'UPDATE_B', payload })
+          setHistory((prev) => [...prev, { date, rate, from: state.a, to: payload }])
+        }
       })
     }
     if (state.base === 'b' && state.b.value !== '0') {
       convert(state.b.code, state.a.code, state.b.value).then((data) => {
-        !!data && dispatch({ type: 'UPDATE_A', payload: { ...state.a, value: data.result } })
+        if (data) {
+          const { date, rate, result } = data
+          const payload = { ...state.a, value: result }
+          dispatch({ type: 'UPDATE_A', payload })
+          setHistory((prev) => [...prev, { date, rate, from: state.b, to: payload }])
+        }
       })
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.a.code, state.a.value, state.b.code, state.b.value])
 
   return (
@@ -149,7 +180,7 @@ export default function Home() {
         <meta name='description' content={meta.description} />
       </Head>
       <main className={`flex min-h-screen flex-col items-center justify-between md:py-12 md:px-24 ${inter.className}`}>
-        <div className='max-w-lg min-h-[600px] bg-black p-2 md:p-6 rounded-xl md:border border-slate-900'>
+        <div className='max-w-lg min-h-[600px] bg-black pt-2 px-2 md:pt-6 md:px-6 md:rounded-xl md:border border-slate-900'>
           <div className='py-4 mb-4 text-center'>
             <h1 className='text-lg text-white'>Converter</h1>
           </div>
@@ -180,6 +211,35 @@ export default function Home() {
               />
             </div>
           </div>
+          {!!history.length && (
+            <div className='py-2 mt-4 bg-slate-900 rounded-t-xl'>
+              <div className='w-20 h-1 mx-auto my-2 bg-black rounded-full' />
+              <div className='space-y-1'>
+                {history.map((item, i) => (
+                  <button
+                    key={`${i}-${item.date}`}
+                    className='w-full px-4 py-1 text-left hover:bg-pink-900/20'
+                    onClick={() => {
+                      dispatch({ type: 'SET_A', payload: item.from })
+                    }}
+                  >
+                    <span className='flex items-center justify-between text-white'>
+                      <span className='space-x-1'>
+                        <span>{item.from.value}</span>
+                        <span className='text-sm lowercase'>
+                          {item.from.code} to {item.to.code}
+                        </span>
+                      </span>
+                      <span>{formatCurrency(item.to.value, item.to.code)}</span>
+                    </span>
+                    <span className='text-xs text-gray-300'>
+                      {item.date} • {item.rate}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </>
