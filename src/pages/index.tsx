@@ -202,7 +202,7 @@ export default function Home() {
                 />
               </div>
             </div>
-            <div className='flex-1'>
+            <div className='flex flex-1'>
               {!!history.length && (
                 <div className='w-full py-2 mt-auto bg-slate-900 rounded-t-xl'>
                   <div className='w-20 h-1 mx-auto my-2 bg-black rounded-full' />
