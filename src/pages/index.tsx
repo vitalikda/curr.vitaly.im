@@ -72,16 +72,6 @@ const CurrSelector = ({ code, onSelect }: { code: string; onSelect: (code: strin
 }
 
 const CurrInput = ({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) => {
-  const formattedNumber = new Intl.NumberFormat('en-US', {
-    style: 'decimal',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }).format(Number(value))
-
-  const handleChange = (value: string) => {
-    onChange(value)
-  }
-
   return (
     <fieldset className='relative flex items-center h-20 px-4 text-white border-2 border-black rounded-2xl bg-slate-900 group-focus-within:bg-pink-500'>
       <label htmlFor={label} className='absolute z-10 capitalize'>
@@ -90,9 +80,9 @@ const CurrInput = ({ label, value, onChange }: { label: string; value: string; o
       <input
         id={label}
         type='text'
-        value={formattedNumber}
+        value={value}
         className='block w-full pl-16 text-2xl text-right bg-transparent border-transparent focus:border-transparent focus:bg-transparent focus:ring-0'
-        onChange={(e) => handleChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
       />
     </fieldset>
   )
@@ -180,7 +170,7 @@ export default function Home() {
         <meta name='description' content={meta.description} />
       </Head>
       <main className={`flex min-h-screen flex-col items-center justify-between md:py-12 md:px-24 ${inter.className}`}>
-        <div className='max-w-lg min-h-[600px] bg-black pt-2 px-2 md:pt-6 md:px-6 md:rounded-xl md:border border-slate-900'>
+        <div className='flex flex-col max-w-lg min-h-[600px] bg-black pt-2 px-2 md:pt-6 md:px-6 md:rounded-xl md:border border-slate-900'>
           <div className='py-4 mb-4 text-center'>
             <h1 className='text-lg text-white'>Converter</h1>
           </div>
@@ -212,15 +202,16 @@ export default function Home() {
             </div>
           </div>
           {!!history.length && (
-            <div className='py-2 mt-4 bg-slate-900 rounded-t-xl'>
+            <div className='flex-1 py-2 mt-4 bg-slate-900 rounded-t-xl'>
               <div className='w-20 h-1 mx-auto my-2 bg-black rounded-full' />
-              <div className='space-y-1'>
+              <div className='flex flex-col-reverse space-y-1'>
                 {history.map((item, i) => (
                   <button
                     key={`${i}-${item.date}`}
-                    className='w-full px-4 py-1 text-left hover:bg-pink-900/20'
+                    className='w-full px-4 py-1 text-left hover:bg-black/20'
                     onClick={() => {
                       dispatch({ type: 'SET_A', payload: item.from })
+                      dispatch({ type: 'UPDATE_B', payload: item.to })
                     }}
                   >
                     <span className='flex items-center justify-between text-white'>
@@ -232,7 +223,7 @@ export default function Home() {
                       </span>
                       <span>{formatCurrency(item.to.value, item.to.code)}</span>
                     </span>
-                    <span className='text-xs text-gray-300'>
+                    <span className='text-xs text-gray-400'>
                       {item.date} • {item.rate}
                     </span>
                   </button>
