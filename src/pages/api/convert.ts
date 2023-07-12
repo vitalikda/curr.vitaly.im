@@ -12,7 +12,7 @@ interface ConvertResponse {
 }
 
 export const config = {
-  runtime: 'edge'
+  runtime: 'edge',
 }
 
 const API_URL = process.env.CURRENCY_API_URL as string
@@ -32,18 +32,20 @@ const formDataSchema = z
       .min(1)
       .refine((value) => {
         return !isNaN(Number(value)) && Number(value) > 0
-      }, 'Value should be a valid number')
+      }, 'Value should be a valid number'),
   })
   .refine((data) => {
     return data.from !== data.to
   }, 'Query currency must be different from base currency')
 
 export default async function handler(req: NextRequest) {
-  const parsed = formDataSchema.safeParse(Object.fromEntries(req.nextUrl.searchParams))
+  const parsed = formDataSchema.safeParse(
+    Object.fromEntries(req.nextUrl.searchParams),
+  )
   if (!parsed.success) {
     return new Response(JSON.stringify(parsed.error), {
       status: 400,
-      headers: { 'content-type': 'application/json' }
+      headers: { 'content-type': 'application/json' },
     })
   }
 
@@ -57,7 +59,7 @@ export default async function handler(req: NextRequest) {
   if (!data.success) {
     return new Response(JSON.stringify(data), {
       status: 400,
-      headers: { 'content-type': 'application/json' }
+      headers: { 'content-type': 'application/json' },
     })
   }
 
@@ -65,11 +67,11 @@ export default async function handler(req: NextRequest) {
     JSON.stringify({
       date: data.date,
       rate: data.info.rate,
-      result: data.result
+      result: data.result,
     }),
     {
       status: 200,
-      headers: { 'content-type': 'application/json' }
-    }
+      headers: { 'content-type': 'application/json' },
+    },
   )
 }

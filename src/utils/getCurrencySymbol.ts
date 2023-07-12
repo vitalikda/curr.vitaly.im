@@ -4,7 +4,7 @@ export const getCurrencySymbol = (code: string) => {
     currency: code,
     currencyDisplay: 'symbol',
     minimumFractionDigits: 0,
-    maximumFractionDigits: 0
+    maximumFractionDigits: 0,
   })
     .format(0)
     .replace(/\d/g, '')

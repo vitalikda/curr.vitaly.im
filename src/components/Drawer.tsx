@@ -1,7 +1,7 @@
 export const Drawer = ({
   open,
   onClose,
-  children
+  children,
 }: {
   open: boolean
   onClose: () => void
@@ -10,7 +10,9 @@ export const Drawer = ({
   return (
     <div className={`${open ? '' : 'sr-only'}`}>
       <div
-        className={`fixed inset-0 z-30 transition-opacity bg-black bg-opacity-50 ${open ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 z-30 transition-opacity bg-black bg-opacity-50 ${
+          open ? 'opacity-100' : 'opacity-0'
+        }`}
         onClick={onClose}
       />
       <div
