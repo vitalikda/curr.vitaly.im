@@ -30,16 +30,25 @@ export class History {
     }
   }
 
-  add(entry: HistoryEntry): void {
-    const list = this.load();
+  add(entry: HistoryEntry): HistoryEntry[] {
     const next = [
       entry,
-      ...list.filter((e) => e.query !== entry.query || e.result !== entry.result),
-    ];
+      ...this.load().filter((e) => e.query !== entry.query || e.result !== entry.result),
+    ].slice(0, this.maxItems);
     try {
-      localStorage.setItem(this.key, JSON.stringify(next.slice(0, this.maxItems)));
+      localStorage.setItem(this.key, JSON.stringify(next));
     } catch {
       // ignore
     }
+    return next;
+  }
+
+  clear(): HistoryEntry[] {
+    try {
+      localStorage.removeItem(this.key);
+    } catch {
+      // ignore
+    }
+    return [];
   }
 }

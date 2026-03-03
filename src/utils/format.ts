@@ -1,8 +1,12 @@
 export function formatCurrency(value: string | number, currency: string): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-  }).format(Number(value));
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency,
+    }).format(Number(value));
+  } catch {
+    return String(value);
+  }
 }
 
 export function formatDate(isoDate: string): string {

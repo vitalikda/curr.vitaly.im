@@ -1,42 +1,48 @@
-import { Accessor, For } from "solid-js";
+import type { Accessor } from "solid-js";
+import { For } from "solid-js";
 import { formatDate } from "../utils/format";
-import { HistoryEntry } from "../utils/history";
+import type { HistoryEntry } from "../utils/history";
 
-interface HistoryListProps {
-  entries: Accessor<HistoryEntry[]>;
-  onSelect: (entry: HistoryEntry) => void;
-}
-
-interface HistoryItemProps {
+type HistoryItemProps = {
   entry: HistoryEntry;
   onSelect: (entry: HistoryEntry) => void;
-}
+};
 
-function HistoryItem({ entry, onSelect }: HistoryItemProps) {
+function HistoryItem(props: HistoryItemProps) {
   return (
     <li>
       <button
         type="button"
-        onClick={() => onSelect(entry)}
+        onClick={() => props.onSelect(props.entry)}
         class="btn btn-ghost w-full justify-start font-normal gap-1 md:gap-2"
       >
-        <span class="whitespace-nowrap">{entry.query}</span>
+        <span class="whitespace-nowrap">{props.entry.query}</span>
         <span class="text-base-content/40">→</span>
-        <span class="text-success/90 whitespace-nowrap">{entry.result}</span>
+        <span class="text-success/90 whitespace-nowrap">{props.entry.result}</span>
         <span class="ml-auto text-xs text-base-content/30 truncate">
-          {formatDate(new Date(entry.timestamp).toISOString())}
+          {formatDate(new Date(props.entry.timestamp).toISOString())}
         </span>
       </button>
     </li>
   );
 }
 
+type HistoryListProps = {
+  entries: Accessor<HistoryEntry[]>;
+  onSelect: (entry: HistoryEntry) => void;
+  onClear: () => void;
+};
+
 export function HistoryList(props: HistoryListProps) {
   return (
     <div class="mt-8 w-full max-w-2xl">
-      <h2 class="text-xs font-medium text-base-content/50 uppercase tracking-wider mb-2">
-        History
-      </h2>
+      <div class="flex items-center justify-between mb-2 gap-2">
+        <h2 class="text-xs font-medium text-base-content/50 uppercase tracking-wider">History</h2>
+        <button type="button" onClick={props.onClear} class="btn btn-xs text-base-content/40">
+          Clear
+        </button>
+      </div>
+
       <ul class="space-y-1">
         <For each={props.entries()}>
           {(entry) => <HistoryItem entry={entry} onSelect={props.onSelect} />}

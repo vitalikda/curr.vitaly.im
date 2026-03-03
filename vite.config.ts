@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 import solidPlugin from "vite-plugin-solid";
@@ -10,5 +11,10 @@ export default defineConfig({
   },
   build: {
     target: "esnext",
+  },
+  test: {
+    globals: true,
+    environment: "node",
+    include: ["src/**/*.test.ts"],
   },
 });

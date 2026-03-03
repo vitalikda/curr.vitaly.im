@@ -1,4 +1,5 @@
-import { Accessor, Show } from "solid-js";
+import type { Accessor } from "solid-js";
+import { Show } from "solid-js";
 
 interface SearchBarProps {
   ref: (el: HTMLInputElement) => void;

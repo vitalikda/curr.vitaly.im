@@ -18,40 +18,20 @@ export default function App() {
   const [entries, setEntries] = createSignal<HistoryEntry[]>(hist.load());
 
   const debouncedInput = useDebounced(input);
+  const parsed = createMemo(() => parseInput(debouncedInput()));
 
-  const mathParsed = createMemo(() => {
-    const p = parseInput(debouncedInput());
-    return p?.type === "math" ? p : null;
-  });
-
-  const convParsed = createMemo(() => {
-    const p = parseInput(debouncedInput());
+  const showCard = () => parsed() !== null;
+  const convParsed = () => {
+    const p = parsed();
     return p?.type === "conversion" ? p : null;
-  });
+  };
 
   const [convertResult] = createResource(convParsed, (params) =>
     convert(params.from, params.to, params.amount),
   );
 
   const saveToHistory = (query: string, result: string) => {
-    hist.add({ query, result, timestamp: Date.now() });
-    setEntries(hist.load());
-  };
-
-  const handleSubmit = (e: Event) => {
-    e.preventDefault();
-    const raw = input().trim();
-    const math = mathParsed();
-    const conv = convParsed();
-    const res = convertResult();
-    if (math) {
-      saveToHistory(raw, String(math.result));
-    } else if (conv && res) {
-      saveToHistory(
-        raw,
-        `${formatCurrency(conv.amount, conv.from)} = ${formatCurrency(res.result, conv.to)}`,
-      );
-    }
+    setEntries(hist.add({ query, result, timestamp: Date.now() }));
   };
 
   const fillFromEntry = (entry: HistoryEntry) => {
@@ -64,7 +44,30 @@ export default function App() {
     inputRef?.focus();
   };
 
-  const hasCard = createMemo(() => mathParsed() !== null || convParsed() !== null);
+  const clearHistory = () => {
+    setEntries(hist.clear());
+  };
+
+  const handleSubmit = (e: Event) => {
+    e.preventDefault();
+
+    const raw = input().trim();
+    const p = parseInput(raw);
+
+    if (p?.type === "math") {
+      saveToHistory(raw, String(p.result));
+    }
+    if (p?.type === "conversion") {
+      const conv = convParsed();
+      const res = convertResult();
+      if (!res || !conv) return;
+      // Only save when the resource result matches this exact conversion (debounce caught up)
+      if (conv.from !== p.from || conv.to !== p.to || conv.amount !== p.amount) return;
+
+      const result = `${formatCurrency(p.amount, p.from)} = ${formatCurrency(res.result, p.to)}`;
+      saveToHistory(raw, result);
+    }
+  };
 
   return (
     <div class="min-h-screen bg-base-100 text-base-content flex flex-col items-center pt-20 px-4">
@@ -76,12 +79,12 @@ export default function App() {
         onClear={clearInput}
       />
 
-      <Show when={hasCard()}>
-        <ResultCard math={mathParsed} conv={convParsed} convertResult={convertResult} />
+      <Show when={showCard()}>
+        <ResultCard parsedResult={parsed()!} input={debouncedInput} convertResult={convertResult} />
       </Show>
 
       <Show when={entries().length > 0}>
-        <HistoryList entries={entries} onSelect={fillFromEntry} />
+        <HistoryList entries={entries} onSelect={fillFromEntry} onClear={clearHistory} />
       </Show>
     </div>
   );
