@@ -1,0 +1,61 @@
+const PRIMARY = "https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1";
+const FALLBACK = "https://latest.currency-api.pages.dev/v1";
+
+interface LatestResponse {
+  date: string;
+  [currency: string]: unknown;
+}
+
+const rateCache = new Map<string, { rate: number; date: string }>();
+
+const cacheKey = (from: string, to: string) => `${from}:${to}`;
+
+export interface ConvertResult {
+  date: string;
+  rate: number;
+  result: number;
+}
+
+async function fetchRates(
+  base: string,
+): Promise<{ date: string; rates: Record<string, number> }> {
+  const lowerBase = base.toLowerCase();
+  const path = `/currencies/${encodeURIComponent(lowerBase)}.json`;
+
+  const tryFetch = async (baseUrl: string): Promise<LatestResponse> => {
+    const res = await fetch(baseUrl + path);
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    return res.json() as Promise<LatestResponse>;
+  };
+
+  let data: LatestResponse;
+  try {
+    data = await tryFetch(PRIMARY);
+  } catch {
+    data = await tryFetch(FALLBACK);
+  }
+
+  const rates = data[lowerBase] as Record<string, number> | undefined;
+  if (!rates) throw new Error(`No rates returned for: ${base}`);
+  return { date: data.date, rates };
+}
+
+export async function convert(from: string, to: string, amount: number): Promise<ConvertResult> {
+  const key = cacheKey(from, to);
+
+  if (!rateCache.has(key)) {
+    const { date, rates } = await fetchRates(from);
+
+    for (const [code, rate] of Object.entries(rates)) {
+      const upper = code.toUpperCase();
+      rateCache.set(cacheKey(from, upper), { rate, date });
+      if (!rateCache.has(cacheKey(upper, from))) {
+        rateCache.set(cacheKey(upper, from), { rate: 1 / rate, date });
+      }
+    }
+  }
+
+  const cached = rateCache.get(key);
+  if (!cached) throw new Error(`Currency not supported: ${to}`);
+  return { date: cached.date, rate: cached.rate, result: amount * cached.rate };
+}
