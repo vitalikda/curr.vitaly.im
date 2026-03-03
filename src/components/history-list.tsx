@@ -1,6 +1,6 @@
 import type { Accessor } from "solid-js";
 import { For } from "solid-js";
-import { formatDate } from "../utils/format";
+import { formatDate, parseDate } from "../utils/format";
 import type { HistoryEntry } from "../utils/history";
 
 type HistoryItemProps = {
@@ -20,7 +20,7 @@ function HistoryItem(props: HistoryItemProps) {
         <span class="text-base-content/40">→</span>
         <span class="text-success/90 whitespace-nowrap">{props.entry.result}</span>
         <span class="ml-auto text-xs text-base-content/30 truncate">
-          {formatDate(new Date(props.entry.timestamp).toISOString())}
+          {formatDate(parseDate(props.entry.timestamp)?.toISOString())}
         </span>
       </button>
     </li>

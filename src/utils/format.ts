@@ -9,7 +9,25 @@ export function formatCurrency(value: string | number, currency: string): string
   }
 }
 
-export function formatDate(isoDate: string): string {
+export function parseDate(value: unknown): Date | null {
+  const ms =
+    typeof value === "number" && Number.isFinite(value)
+      ? value
+      : typeof value === "string"
+        ? Date.parse(value)
+        : Number.NaN;
+  if (!Number.isFinite(ms)) return null;
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return null;
+  try {
+    return date;
+  } catch {
+    return null;
+  }
+}
+
+export function formatDate(isoDate?: string | null): string {
+  if (!isoDate) return "";
   const [y, m, d] = isoDate.split("T")[0].split("-");
   return `${d}.${m}.${y}`;
 }

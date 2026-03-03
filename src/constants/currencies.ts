@@ -1,4 +1,4 @@
-const CRYPTO_NAMES: Record<string, string> = {
+const CURRENCY_CRYPTO: Record<string, string> = {
   BTC: "Bitcoin",
   ETH: "Ethereum",
   SOL: "Solana",
@@ -10,8 +10,24 @@ const CRYPTO_NAMES: Record<string, string> = {
   DOT: "Polkadot",
 };
 
+export const CURRENCY_SYMBOL: Record<string, string> = {
+  $: "USD", // US Dollar
+  "€": "EUR", // Euro
+  "£": "GBP", // British Pound
+  "¥": "JPY", // Japanese Yen
+  "₹": "INR", // Indian Rupee
+  "₽": "RUB", // Russian Ruble
+  "₺": "TRY", // Turkish Lira
+  "₮": "MNT", // Mongolian Tugrik
+  "₩": "KRW", // South Korean Won
+  "₸": "KZT", // Kazakhstani Tenge
+  "₱": "PHP", // Philippine Peso
+  "₳": "ARS", // Argentine Peso
+  "₦": "NGN", // Nigerian Naira
+};
+
 const displayNames = new Intl.DisplayNames(["en"], { type: "currency" });
 
 export function getCurrencyName(code: string): string {
-  return CRYPTO_NAMES[code] ?? displayNames.of(code) ?? code;
+  return CURRENCY_CRYPTO[code] ?? displayNames.of(code) ?? code;
 }

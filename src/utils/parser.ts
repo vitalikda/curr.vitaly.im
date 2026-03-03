@@ -1,3 +1,4 @@
+import { CURRENCY_SYMBOL } from "../constants/currencies";
 import type { Result } from "./result";
 import { Err, Ok, isErr } from "./result";
 
@@ -12,7 +13,7 @@ export type Token =
 
 const RE_WHITESPACE = /^\s+/;
 const RE_NUMBER = /^\d[\d,]*(\.\d+)?|^\.\d+/;
-const RE_CURRENCY_SYMBOL = /^[$£€]/;
+const RE_CURRENCY_SYMBOL = new RegExp(`^[${Object.keys(CURRENCY_SYMBOL).join("")}]`);
 const RE_WORD = /^[A-Za-z]+/;
 const RE_KEYWORD = /^(to|in|as)$/i;
 
@@ -204,6 +205,27 @@ export function parseInput(input: string): ParseResult {
       from: currencies[0].value,
       to: currencies[1].value,
     };
+  }
+
+  if (currencies.length === 1) {
+    const prefix = tokens.slice(0, firstCurrencyIdx);
+    const symbolToken = prefix.find((t) => t.type === "currencySymbol");
+    if (symbolToken && symbolToken.type === "currencySymbol") {
+      const from = CURRENCY_SYMBOL[symbolToken.value];
+      if (from) {
+        const to = currencies[0].value;
+        if (from === to) return null;
+        const mathOnly = onlyMath(mathTokens);
+        const amountResult = mathOnly.length ? evalMath(mathOnly) : Ok(1);
+        if (isErr(amountResult)) return { type: "error", message: amountResult.error };
+        return {
+          type: "conversion",
+          amount: amountResult.value,
+          from,
+          to,
+        };
+      }
+    }
   }
 
   if (currencies.length === 1 && mathTokens.length > 0) {

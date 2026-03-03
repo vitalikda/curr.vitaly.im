@@ -24,7 +24,26 @@ export class History {
       if (!raw) return [];
       const parsed = JSON.parse(raw) as unknown;
       if (!Array.isArray(parsed)) return [];
-      return parsed.slice(0, this.maxItems);
+      const fallbackTs = Date.now();
+      return parsed
+        .filter(
+          (e): e is HistoryEntry =>
+            e != null &&
+            typeof e === "object" &&
+            typeof (e as HistoryEntry).query === "string" &&
+            (e as HistoryEntry).query.length > 0 &&
+            typeof (e as HistoryEntry).result === "string" &&
+            (e as HistoryEntry).result.length > 0,
+        )
+        .map((e) => {
+          const entry = e as HistoryEntry & { timestamp?: unknown };
+          const ts =
+            typeof entry.timestamp === "number" && Number.isFinite(entry.timestamp)
+              ? entry.timestamp
+              : fallbackTs;
+          return { query: entry.query, result: entry.result, timestamp: ts };
+        })
+        .slice(0, this.maxItems);
     } catch {
       return [];
     }

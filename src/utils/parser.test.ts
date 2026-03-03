@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
+import { CURRENCY_SYMBOL } from "../constants/currencies";
 import { evalMath, parseInput, tokenize } from "./parser";
 import { Err, isOk } from "./result";
+
+const symbolEntries = Object.entries(CURRENCY_SYMBOL);
+const currencyCodes = [...new Set(Object.values(CURRENCY_SYMBOL))];
+function otherCode(avoid: string): string {
+  return currencyCodes.find((c) => c !== avoid) ?? currencyCodes[0];
+}
 
 describe("tokenize", () => {
   it("tokenizes numbers", () => {
@@ -30,10 +37,10 @@ describe("tokenize", () => {
     expect(tokenize("EUR")).toEqual([{ type: "currency", value: "EUR" }]);
   });
 
-  it("tokenizes currency symbols $ £ €", () => {
-    expect(tokenize("$")).toEqual([{ type: "currencySymbol", value: "$" }]);
-    expect(tokenize("£")).toEqual([{ type: "currencySymbol", value: "£" }]);
-    expect(tokenize("€")).toEqual([{ type: "currencySymbol", value: "€" }]);
+  it("tokenizes all configured currency symbols", () => {
+    for (const [symbol] of symbolEntries) {
+      expect(tokenize(symbol)).toEqual([{ type: "currencySymbol", value: symbol }]);
+    }
   });
 
   it("tokenizes keywords to/in/as", () => {
@@ -127,19 +134,48 @@ describe("parseInput", () => {
     });
   });
 
-  it("parses conversion with optional currency symbols $ £ €", () => {
-    expect(parseInput("$100 usd eur")).toEqual({
-      type: "conversion",
-      from: "USD",
-      to: "EUR",
-      amount: 100,
-    });
-    expect(parseInput("100€ usd eur")).toEqual({
-      type: "conversion",
-      from: "USD",
-      to: "EUR",
-      amount: 100,
-    });
+  it("parses conversion with optional currency symbols", () => {
+    const from = "USD";
+    const to = "EUR";
+    for (const [symbol] of symbolEntries) {
+      expect(parseInput(`${symbol}100 ${from.toLowerCase()} ${to.toLowerCase()}`)).toEqual({
+        type: "conversion",
+        from,
+        to,
+        amount: 100,
+      });
+      expect(parseInput(`100${symbol} ${from.toLowerCase()} ${to.toLowerCase()}`)).toEqual({
+        type: "conversion",
+        from,
+        to,
+        amount: 100,
+      });
+    }
+  });
+
+  it("parses conversion from currency symbol to single currency", () => {
+    for (const [symbol, fromCode] of symbolEntries) {
+      const toCode = otherCode(fromCode);
+      expect(parseInput(`${symbol}10 to ${toCode.toLowerCase()}`)).toEqual({
+        type: "conversion",
+        from: fromCode,
+        to: toCode,
+        amount: 10,
+      });
+      expect(parseInput(`${symbol}50 ${fromCode.toLowerCase()}`)).toBeNull();
+      expect(parseInput(`${symbol}50 ${toCode.toLowerCase()}`)).toEqual({
+        type: "conversion",
+        from: fromCode,
+        to: toCode,
+        amount: 50,
+      });
+      expect(parseInput(`${symbol} ${toCode.toLowerCase()}`)).toEqual({
+        type: "conversion",
+        from: fromCode,
+        to: toCode,
+        amount: 1,
+      });
+    }
   });
 
   it("parses conversion with math expression as amount", () => {
